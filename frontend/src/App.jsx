@@ -46,19 +46,38 @@ function App() {
     setSelectedLocation('all');
 
     try {
-      const response = await fetch('/api/search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: targetQuery })
-      });
+      let response;
+      let retries = 6;
+      let rawText = '';
       
-      // Safe JSON parse — if backend returns HTML/text, show a useful error instead of "Unexpected token"
-      const rawText = await response.text();
+      while (retries > 0) {
+        response = await fetch('/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: targetQuery })
+        });
+        
+        rawText = await response.text();
+        
+        if ((response.status === 502 || response.status === 503 || response.status === 504) && !rawText.trim().startsWith('{')) {
+          retries--;
+          if (retries === 0) break;
+          setLogs(prev => {
+            const last = prev[prev.length - 1];
+            if (last && last.startsWith('⏳ Waking up backend')) return prev;
+            return [...prev, '⏳ Waking up backend (this takes ~30s on free tier)...'];
+          });
+          await new Promise(r => setTimeout(r, 5000));
+          continue;
+        }
+        break;
+      }
+      
       let data;
       try {
         data = JSON.parse(rawText);
       } catch {
-        throw new Error(`Backend returned HTTP ${response.status} with non-JSON response:\n${rawText.slice(0, 200)}`);
+        throw new Error(`Backend returned HTTP ${response?.status} with non-JSON response:\n${rawText.slice(0, 200)}`);
       }
       
       if (!response.ok) {
