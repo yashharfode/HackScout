@@ -52,10 +52,17 @@ function App() {
         body: JSON.stringify({ query: targetQuery })
       });
       
-      const data = await response.json();
+      // Safe JSON parse — if backend returns HTML/text, show a useful error instead of "Unexpected token"
+      const rawText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        throw new Error(`Backend returned HTTP ${response.status} with non-JSON response:\n${rawText.slice(0, 200)}`);
+      }
       
       if (!response.ok) {
-        throw new Error(data.error || "Failed to start search");
+        throw new Error(data.error || `HTTP ${response.status}: Failed to start search`);
       }
       
       const jobId = data.jobId;

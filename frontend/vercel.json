@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://hackscout.onrender.com/api/:path*"
+    }
+  ]
+}
