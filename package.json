@@ -1,0 +1,19 @@
+{
+  "name": "hackscout",
+  "version": "1.0.0",
+  "description": "HackScout Live AI Browser Agent",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "cli": "node src/cli.js",
+    "test": "node tests.js",
+    "build": "cd frontend && npm install && npm run build"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "openai": "^4.86.1"
+  }
+}
