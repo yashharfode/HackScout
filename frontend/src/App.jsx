@@ -72,16 +72,34 @@ function App() {
         try {
           const statusRes = await fetch(`/api/search/status/${jobId}`);
           
+          // Handle Render free-tier 502/503 cold-start: don't kill the poll, just skip this tick
           if (!statusRes.ok) {
              if (statusRes.status === 404) {
                clearInterval(pollInterval);
-               setError("Job not found or expired.");
+               setError("Job not found or expired. The backend may have restarted — please search again.");
                setIsSearching(false);
+               return;
              }
-             return;
+             if (statusRes.status === 502 || statusRes.status === 503) {
+               setLogs(prev => {
+                 const last = prev[prev.length - 1];
+                 if (last && last.startsWith('⏳ Backend restarting')) return prev;
+                 return [...prev, '⏳ Backend restarting, retrying...'];
+               });
+               return; // Skip this tick, poll will retry in 1s
+             }
+             return; // Other non-ok statuses: skip silently
           }
           
-          const statusData = await statusRes.json();
+          // Safe JSON parse on status — handles rare Cloudflare HTML responses
+          const rawStatus = await statusRes.text();
+          let statusData;
+          try {
+            statusData = JSON.parse(rawStatus);
+          } catch {
+            console.warn("Status poll returned non-JSON:", rawStatus.slice(0, 100));
+            return; // Skip this tick, retry next poll
+          }
           
           for (let i = lastProgressIndex; i < statusData.progress.length; i++) {
             const ev = statusData.progress[i];
