@@ -26,6 +26,34 @@ setInterval(() => {
   }
 }, 60 * 1000);
 
+app.get('/api/diag', (req, res) => {
+  const { execSync } = require('child_process');
+  try {
+    const cmds = [
+      "which webcmd || echo 'webcmd not found'",
+      "./node_modules/.bin/webcmd --version || echo 'local webcmd failed'",
+      "./node_modules/.bin/webcmd doctor || echo 'doctor failed'",
+      "npm list @agentrhq/webcmd || echo 'npm list failed'",
+      "which chromium || echo 'chromium not found'",
+      "which google-chrome || echo 'chrome not found'",
+      "node --version",
+      "printenv PATH"
+    ];
+    let out = "";
+    for (let cmd of cmds) {
+      out += `\n--- ${cmd} ---\n`;
+      try { out += execSync(cmd).toString(); } catch(e) { out += e.toString(); }
+    }
+    
+    out += `\n--- webcmd session create -f json ---\n`;
+    try { out += execSync("./node_modules/.bin/webcmd session create -f json 2>&1").toString(); } catch(e) { out += e.toString(); }
+    
+    res.type('text/plain').send(out);
+  } catch (e) {
+    res.status(500).send(e.toString());
+  }
+});
+
 app.post("/api/search", (req, res) => {
   const { query } = req.body;
   
